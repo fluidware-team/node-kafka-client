@@ -15,11 +15,50 @@
  */
 
 import { EnvParse } from '@fluidware-it/saddlebag';
+import { KafkaConfig } from 'kafkajs';
+import * as tls from 'tls';
+import * as fs from 'fs';
 
-export const KAFKA_CLIENT_ID = EnvParse.envStringRequired('KAFKA_CLIENT_ID');
-export const KAFKA_BROKERS = EnvParse.envStringList('KAFKA_BROKERS', ['kafka:9092']);
-export const KAFKA_USE_SSL = EnvParse.envBool('KAFKA_USE_SSL', false);
-export const KAFKA_SSL_REJECT_UNAUTHORIZED = EnvParse.envBool('KAFKA_SSL_REJECT_UNAUTHORIZED', true);
-export const KAFKA_SSL_CA_PATH = EnvParse.envString('KAFKA_SSL_CA_PATH', '');
-export const KAFKA_SSL_KEY_PEM_PATH = EnvParse.envString('KAFKA_SSL_KEY_PEM_PATH', '');
-export const KAFKA_SSL_CERT_PEM_PATH = EnvParse.envString('KAFKA_SSL_CERT_PEM_PATH', '');
+const memoizedOptions: { [prefix: string]: KafkaConfig } = {};
+
+function getSSLConfig(prefix: string) {
+  const KAFKA_USE_SSL = EnvParse.envBool(`KAFKA_${prefix}USE_SSL`, false);
+  const KAFKA_SSL_REJECT_UNAUTHORIZED = EnvParse.envBool(`KAFKA_${prefix}SSL_REJECT_UNAUTHORIZED`, true);
+  const KAFKA_SSL_CA_PATH = EnvParse.envString(`KAFKA_${prefix}SSL_CA_PATH`, '');
+  const KAFKA_SSL_KEY_PEM_PATH = EnvParse.envString(`KAFKA_${prefix}SSL_KEY_PEM_PATH`, '');
+  const KAFKA_SSL_CERT_PEM_PATH = EnvParse.envString(`KAFKA_${prefix}SSL_CERT_PEM_PATH`, '');
+  let sslConfig: boolean | tls.ConnectionOptions | undefined = undefined;
+  if (KAFKA_USE_SSL) {
+    if (!KAFKA_SSL_REJECT_UNAUTHORIZED) {
+      sslConfig = {
+        rejectUnauthorized: false
+      };
+    } else {
+      if (KAFKA_SSL_CA_PATH && KAFKA_SSL_CERT_PEM_PATH && KAFKA_SSL_KEY_PEM_PATH) {
+        sslConfig = {
+          ca: [fs.readFileSync(KAFKA_SSL_CA_PATH, 'utf-8')],
+          key: fs.readFileSync(KAFKA_SSL_KEY_PEM_PATH, 'utf-8'),
+          cert: fs.readFileSync(KAFKA_SSL_CERT_PEM_PATH, 'utf-8')
+        };
+      } else {
+        sslConfig = true;
+      }
+    }
+  }
+  return sslConfig;
+}
+
+export function getKafkaConfig(prefix?: string) {
+  const prefixKey = prefix ?? '_default_';
+  const _prefix = prefix ? `${prefix}_` : '';
+  if (!memoizedOptions[prefixKey]) {
+    const KAFKA_CLIENT_ID = EnvParse.envStringRequired(`KAFKA_${_prefix}CLIENT_ID`);
+    const KAFKA_BROKERS = EnvParse.envStringList(`KAFKA_${_prefix}BROKERS`, ['kafka:9092']);
+    memoizedOptions[prefixKey] = {
+      clientId: KAFKA_CLIENT_ID,
+      brokers: KAFKA_BROKERS.map(s => s.trim()).filter((s: string) => !!s),
+      ssl: getSSLConfig(_prefix)
+    };
+  }
+  return memoizedOptions[prefixKey];
+}
