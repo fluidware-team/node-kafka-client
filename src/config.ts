@@ -50,7 +50,7 @@ function getSSLConfig(prefix: string) {
 
 export function getKafkaConfig(prefix?: string) {
   const prefixKey = prefix ?? '_default_';
-  const _prefix = prefix ? `${prefix}_` : '';
+  const _prefix = prefix ? `${prefix.toUpperCase()}_` : '';
   if (!memoizedOptions[prefixKey]) {
     const KAFKA_CLIENT_ID = EnvParse.envStringRequired(`KAFKA_${_prefix}CLIENT_ID`);
     const KAFKA_BROKERS = EnvParse.envStringList(`KAFKA_${_prefix}BROKERS`, ['kafka:9092']);
