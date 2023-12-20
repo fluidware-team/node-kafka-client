@@ -46,15 +46,18 @@ export class KafkaConsumer implements GenericConsumer {
     if (this.connected) return;
     await this.consumer.connect();
     this.connected = true;
+    this.logger.info('connected');
   }
 
-  public async disconnect(): Promise<void> {
-    if (!this.connected) return;
+  public async disconnect(): Promise<boolean> {
+    if (!this.connected) return true;
     try {
       await this.consumer.disconnect();
       this.connected = false;
+      return true;
     } catch (err) {
       this.logger.error(`Error on disconnect due to: ${err}`);
     }
+    return false;
   }
 }
