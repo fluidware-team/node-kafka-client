@@ -18,6 +18,7 @@ import { EnvParse } from '@fluidware-it/saddlebag';
 import { KafkaConfig } from 'kafkajs';
 import * as tls from 'tls';
 import * as fs from 'fs';
+import * as os from 'os';
 
 const memoizedOptions: { [prefix: string]: KafkaConfig } = {};
 
@@ -52,9 +53,10 @@ export function getKafkaConfig(instancePrefix?: string) {
   const prefixKey = instancePrefix ?? '_default_';
   const prefix = instancePrefix ? `${instancePrefix.toUpperCase()}_` : '';
   if (!memoizedOptions[prefixKey]) {
-    // KAFKA_${prefix}CLIENT_ID: "prefix" is not required, can be used to have multiple kafka configurations: i.e: KAFKA_INSTANCE_A_CLIENT_ID=consumerA KAFKA_INSTANCE_B_CLIENT_ID=consumerB
-    const KAFKA_CLIENT_ID = EnvParse.envStringRequired(`KAFKA_${prefix}CLIENT_ID`);
+    // KAFKA_${prefix}BROKERS: "prefix" is not required, can be used to have multiple kafka configurations: i.e: KAFKA_INSTANCE_A_BROKERS=kafka-a-01:9092,kafka-a-02:9092, KAFKA_INSTANCE_B_BROKERS=kafka-b-01:9092,kafka-b-02:9092
     const KAFKA_BROKERS = EnvParse.envStringList(`KAFKA_${prefix}BROKERS`, ['localhost:9092']);
+    // KAFKA_${prefix}CLIENT_ID: default to `hostname()`
+    const KAFKA_CLIENT_ID = EnvParse.envString(`KAFKA_${prefix}CLIENT_ID`, os.hostname());
     memoizedOptions[prefixKey] = {
       clientId: KAFKA_CLIENT_ID,
       brokers: KAFKA_BROKERS.map(s => s.trim()).filter((s: string) => !!s),
