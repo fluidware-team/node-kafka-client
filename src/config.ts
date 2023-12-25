@@ -48,16 +48,17 @@ function getSSLConfig(prefix: string) {
   return sslConfig;
 }
 
-export function getKafkaConfig(prefix?: string) {
-  const prefixKey = prefix ?? '_default_';
-  const _prefix = prefix ? `${prefix.toUpperCase()}_` : '';
+export function getKafkaConfig(instancePrefix?: string) {
+  const prefixKey = instancePrefix ?? '_default_';
+  const prefix = instancePrefix ? `${instancePrefix.toUpperCase()}_` : '';
   if (!memoizedOptions[prefixKey]) {
-    const KAFKA_CLIENT_ID = EnvParse.envStringRequired(`KAFKA_${_prefix}CLIENT_ID`);
-    const KAFKA_BROKERS = EnvParse.envStringList(`KAFKA_${_prefix}BROKERS`, ['kafka:9092']);
+    // KAFKA_${prefix}CLIENT_ID: "prefix" is not required, can be used to have multiple kafka configurations: i.e: KAFKA_INSTANCE_A_CLIENT_ID=consumerA KAFKA_INSTANCE_B_CLIENT_ID=consumerB
+    const KAFKA_CLIENT_ID = EnvParse.envStringRequired(`KAFKA_${prefix}CLIENT_ID`);
+    const KAFKA_BROKERS = EnvParse.envStringList(`KAFKA_${prefix}BROKERS`, ['localhost:9092']);
     memoizedOptions[prefixKey] = {
       clientId: KAFKA_CLIENT_ID,
       brokers: KAFKA_BROKERS.map(s => s.trim()).filter((s: string) => !!s),
-      ssl: getSSLConfig(_prefix)
+      ssl: getSSLConfig(prefix)
     };
   }
   return memoizedOptions[prefixKey];
