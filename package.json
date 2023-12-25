@@ -17,7 +17,8 @@
     "lint": "eslint src",
     "lint:fix": "eslint --fix src",
     "test": "jest",
-    "preversion": "npm run lint && npm run test"
+    "env2doc": "npm run compile && env2doc -p build/src > ENVIRONMENT.md",
+    "preversion": "npm run lint && npm run test && npm run env2doc"
   },
   "engines": {
     "node": ">=18.4"
@@ -27,6 +28,7 @@
     "kafkajs": "^2.2.4"
   },
   "devDependencies": {
+    "@fluidware-it/env2doc": "^0.3.1",
     "@types/jest": "^29.5.6",
     "@typescript-eslint/eslint-plugin": "^6.8.0",
     "@typescript-eslint/parser": "^6.8.0",
