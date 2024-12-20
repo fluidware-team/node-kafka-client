@@ -15,7 +15,7 @@
  */
 
 import { EnvParse } from '@fluidware-it/saddlebag';
-import { KafkaConfig } from 'kafkajs';
+import { KafkaConfig, logLevel } from 'kafkajs';
 import * as tls from 'tls';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -49,6 +49,22 @@ function getSSLConfig(prefix: string) {
   return sslConfig;
 }
 
+function remapLogLevel(logLevelString: string): logLevel {
+  switch (logLevelString.toUpperCase()) {
+    case 'NOTHING':
+      return logLevel.NOTHING;
+    case 'ERROR':
+      return logLevel.ERROR;
+    case 'WARN':
+      return logLevel.WARN;
+    case 'INFO':
+      return logLevel.INFO;
+    case 'DEBUG':
+      return logLevel.DEBUG;
+    default:
+      return logLevel.NOTHING;
+  }
+}
 export function getKafkaConfig(instancePrefix?: string) {
   const prefixKey = instancePrefix ?? '_default_';
   const prefix = instancePrefix ? `${instancePrefix.toUpperCase()}_` : '';
@@ -57,7 +73,10 @@ export function getKafkaConfig(instancePrefix?: string) {
     const KAFKA_BROKERS = EnvParse.envStringList(`KAFKA_${prefix}BROKERS`, ['localhost:9092']);
     // KAFKA_${prefix}CLIENT_ID: default to `hostname()`
     const KAFKA_CLIENT_ID = EnvParse.envString(`KAFKA_${prefix}CLIENT_ID`, os.hostname());
+    // KAFKA_${prefix}LOG_LEVEL: possible values: 'NOTHING', 'ERROR', 'WARN', 'INFO', 'DEBUG'
+    const KAFKA_LOG_LEVEL = EnvParse.envString(`KAFKA_${prefix}LOG_LEVEL`, 'NOTHING');
     memoizedOptions[prefixKey] = {
+      logLevel: remapLogLevel(KAFKA_LOG_LEVEL),
       clientId: KAFKA_CLIENT_ID,
       brokers: KAFKA_BROKERS.map(s => s.trim()).filter((s: string) => !!s),
       ssl: getSSLConfig(prefix)
