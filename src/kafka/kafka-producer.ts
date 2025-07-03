@@ -13,6 +13,10 @@ export class KafkaProducer implements GenericProducer {
     this.producer = producer;
   }
 
+  public on: Producer['on'] = (...args) => {
+    return this.producer.on(...args);
+  };
+
   public async send({ topic, messages, acks, timeout, compression }: ProducerRecord): Promise<boolean> {
     this.logger.info(`Sending message: ${{ topic, messages, acks, timeout, compression }}`);
     if (!this.connected) {

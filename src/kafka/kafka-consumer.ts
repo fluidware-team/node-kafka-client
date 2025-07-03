@@ -17,6 +17,10 @@ export class KafkaConsumer implements GenericConsumer {
     this.consumer = consumer;
   }
 
+  public on: Consumer['on'] = (...args) => {
+    return this.consumer.on(...args);
+  };
+
   public setCallback(func: EachMessageHandler): void {
     this.callback = func;
   }
