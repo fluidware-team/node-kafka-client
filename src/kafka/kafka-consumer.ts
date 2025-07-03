@@ -1,4 +1,13 @@
-import { Consumer, EachMessageHandler, EachMessagePayload, TopicPartitionOffsetAndMetadata } from 'kafkajs';
+import {
+  Consumer,
+  ConsumerEvents,
+  EachMessageHandler,
+  EachMessagePayload,
+  InstrumentationEvent,
+  RemoveInstrumentationEventListener,
+  TopicPartitionOffsetAndMetadata,
+  ValueOf
+} from 'kafkajs';
 import { Consumer as GenericConsumer } from '../interface';
 import { getLogger } from '@fluidware-it/saddlebag';
 
@@ -8,6 +17,8 @@ export class KafkaConsumer implements GenericConsumer {
   private readonly logger = getLogger().child({ component: 'kafka-consumer' });
 
   private connected = false;
+
+  private eventsListener: Record<string, RemoveInstrumentationEventListener<ValueOf<ConsumerEvents>>[]> = {};
 
   private callback: EachMessageHandler = () => {
     throw new Error('EachMessagePayload must be override before connect() method call');
@@ -47,6 +58,21 @@ export class KafkaConsumer implements GenericConsumer {
     await this.consumer.connect();
     this.connected = true;
     this.logger.info('connected');
+  }
+
+  public on<T>(event: ValueOf<ConsumerEvents>, listener: (event: InstrumentationEvent<T>) => void): void {
+    const off = this.consumer.on(event, listener);
+    if (!this.eventsListener[event]) {
+      this.eventsListener[event] = [];
+    }
+    this.eventsListener[event].push(off);
+  }
+
+  public off(event: ValueOf<ConsumerEvents>) {
+    if (this.eventsListener[event]) {
+      this.eventsListener[event].forEach(off => off());
+      delete this.eventsListener[event];
+    }
   }
 
   public async disconnect(): Promise<boolean> {

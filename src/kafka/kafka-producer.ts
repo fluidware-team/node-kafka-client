@@ -1,4 +1,11 @@
-import { Producer, ProducerRecord } from 'kafkajs';
+import {
+  InstrumentationEvent,
+  Producer,
+  ProducerEvents,
+  ProducerRecord,
+  RemoveInstrumentationEventListener,
+  ValueOf
+} from 'kafkajs';
 import { Producer as GenericProducer } from '../interface';
 import { getLogger } from '@fluidware-it/saddlebag';
 
@@ -8,6 +15,8 @@ export class KafkaProducer implements GenericProducer {
   private readonly logger = getLogger().child({ component: 'kafka-producer' });
 
   private connected = false;
+
+  private eventsListener: Record<string, RemoveInstrumentationEventListener<ValueOf<ProducerEvents>>[]> = {};
 
   constructor(producer: Producer) {
     this.producer = producer;
@@ -30,6 +39,21 @@ export class KafkaProducer implements GenericProducer {
     } catch (err) {
       this.logger.error(`Can't send message due to: ${err}`);
       return false;
+    }
+  }
+
+  public on<T>(event: ValueOf<ProducerEvents>, listener: (event: InstrumentationEvent<T>) => void): void {
+    const off = this.producer.on(event, listener);
+    if (!this.eventsListener[event]) {
+      this.eventsListener[event] = [];
+    }
+    this.eventsListener[event].push(off);
+  }
+
+  public off(event: ValueOf<ProducerEvents>): void {
+    if (this.eventsListener[event]) {
+      this.eventsListener[event].forEach(off => off());
+      delete this.eventsListener[event];
     }
   }
 
