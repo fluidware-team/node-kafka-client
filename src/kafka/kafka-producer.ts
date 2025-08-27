@@ -23,10 +23,12 @@ export class KafkaProducer implements GenericProducer {
   }
 
   public async send({ topic, messages, acks, timeout, compression }: ProducerRecord): Promise<boolean> {
-    this.logger.info(`Sending message: ${{ topic, messages, acks, timeout, compression }}`);
     if (!this.connected) {
+      this.logger.info('Kafka not connected. Connecting...');
       await this.connect();
     }
+    this.logger.info(`Sending message to Kafka topic: ${topic}`);
+    this.logger.debug({ message: { topic, messages, acks, timeout, compression } }, 'Sending message to Kafka');
     try {
       await this.producer.send({
         topic,
