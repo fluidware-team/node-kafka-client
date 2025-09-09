@@ -20,6 +20,7 @@ import { logLevel } from 'kafkajs';
 import * as tls from 'tls';
 import * as fs from 'fs';
 import * as os from 'os';
+import { merge } from 'ts-deepmerge';
 
 const memoizedOptions: { [prefix: string]: KafkaConfig } = {};
 
@@ -116,7 +117,7 @@ function remapLogLevel(logLevelString: string): logLevel {
   }
 }
 
-export function getKafkaConfig(instancePrefix?: string) {
+export function getKafkaConfigFromEnv(instancePrefix?: string): KafkaConfig {
   const prefixKey = instancePrefix ?? '_default_';
   const prefix = instancePrefix ? `${instancePrefix.toUpperCase()}_` : '';
   if (!memoizedOptions[prefixKey]) {
@@ -135,4 +136,13 @@ export function getKafkaConfig(instancePrefix?: string) {
     };
   }
   return memoizedOptions[prefixKey];
+}
+
+export function getKafkaConfig(opts: { code?: string; kafkaConfig?: Partial<KafkaConfig> }): KafkaConfig {
+  const configFromEnv = getKafkaConfigFromEnv(opts.code);
+  return merge.withOptions(
+    { mergeArrays: false, allowUndefinedOverrides: false },
+    configFromEnv,
+    opts.kafkaConfig ?? {}
+  ) as KafkaConfig;
 }

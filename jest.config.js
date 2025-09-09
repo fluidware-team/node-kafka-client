@@ -3,5 +3,6 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   collectCoverage: true,
-  reporters: ['default']
+  reporters: ['default'],
+  testPathIgnorePatterns: ['/node_modules/', '/build/'],
 };

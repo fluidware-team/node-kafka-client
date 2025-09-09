@@ -25,7 +25,8 @@
   },
   "dependencies": {
     "@fluidware-it/saddlebag": "^0.1.1",
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "ts-deepmerge": "^7.0.3"
   },
   "devDependencies": {
     "@fluidware-it/env2doc": "^0.3.1",
