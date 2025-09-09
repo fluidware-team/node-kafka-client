@@ -15,7 +15,8 @@
  */
 
 import { EnvParse } from '@fluidware-it/saddlebag';
-import { KafkaConfig, logLevel } from 'kafkajs';
+import type { KafkaConfig, SASLOptions } from 'kafkajs';
+import { logLevel } from 'kafkajs';
 import * as tls from 'tls';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -49,6 +50,55 @@ function getSSLConfig(prefix: string) {
   return sslConfig;
 }
 
+function getSASLConfig(prefix: string): SASLOptions | undefined {
+  // KAFKA_${prefix}SASL: if set, will take precedence over KAFKA_${prefix}SASL_MECHANISM. it must be a JSON string, refer to https://kafka.js.org/docs/configuration#sasl for the structure
+  const KAFKA_SASL = EnvParse.envStringOptional(`KAFKA_${prefix}SASL`);
+  if (KAFKA_SASL) {
+    return JSON.parse(KAFKA_SASL) as SASLOptions;
+  }
+  // KAFKA_${prefix}SASL_MECHANISM: possible values are: 'plain', 'scram-sha-256', 'scram-sha-512', 'aws'
+  const KAFKA_SASL_MECHANISM = EnvParse.envString(`KAFKA_${prefix}SASL_MECHANISM`, '').toLowerCase();
+  if (!KAFKA_SASL_MECHANISM) {
+    return;
+  }
+  switch (KAFKA_SASL_MECHANISM) {
+    case 'plain':
+    case 'scram-sha-256':
+    case 'scram-sha-512': {
+      const KAFKA_SASL_USERNAME = EnvParse.envString(`KAFKA_${prefix}SASL_USERNAME`, '');
+      const KAFKA_SASL_PASSWORD = EnvParse.envString(`KAFKA_${prefix}SASL_PASSWORD`, '');
+      if (KAFKA_SASL_USERNAME && KAFKA_SASL_PASSWORD) {
+        return {
+          mechanism: KAFKA_SASL_MECHANISM,
+          username: KAFKA_SASL_USERNAME,
+          password: KAFKA_SASL_PASSWORD
+        };
+      }
+      return;
+    }
+    case 'aws': {
+      const KAFKA_SASL_ACCESS_KEY_ID = EnvParse.envString(`KAFKA_${prefix}SASL_ACCESS_KEY_ID`, '');
+      const KAFKA_SASL_SECRET_ACCESS_KEY = EnvParse.envString(`KAFKA_${prefix}SASL_SECRET_ACCESS_KEY`, '');
+      const KAFKA_SASL_SESSION_TOKEN = EnvParse.envStringOptional(`KAFKA_${prefix}SASL_SESSION_TOKEN`);
+      const KAFKA_SASL_AUTHORIZATION_ID = EnvParse.envString(`KAFKA_${prefix}SASL_AUTHORIZATION_ID`, '');
+      if (KAFKA_SASL_AUTHORIZATION_ID && KAFKA_SASL_ACCESS_KEY_ID && KAFKA_SASL_SECRET_ACCESS_KEY) {
+        return {
+          mechanism: 'aws',
+          authorizationIdentity: KAFKA_SASL_AUTHORIZATION_ID,
+          accessKeyId: KAFKA_SASL_ACCESS_KEY_ID,
+          secretAccessKey: KAFKA_SASL_SECRET_ACCESS_KEY,
+          sessionToken: KAFKA_SASL_SESSION_TOKEN
+        };
+      }
+      return;
+    }
+    default:
+      throw new Error(
+        'Invalid KAFKA_${prefix}SASL_MECHANISM, possible values are: plain, scram-sha-256, scram-sha-512, aws'
+      );
+  }
+}
+
 function remapLogLevel(logLevelString: string): logLevel {
   switch (logLevelString.toUpperCase()) {
     case 'NOTHING':
@@ -65,6 +115,7 @@ function remapLogLevel(logLevelString: string): logLevel {
       return logLevel.NOTHING;
   }
 }
+
 export function getKafkaConfig(instancePrefix?: string) {
   const prefixKey = instancePrefix ?? '_default_';
   const prefix = instancePrefix ? `${instancePrefix.toUpperCase()}_` : '';
@@ -79,7 +130,8 @@ export function getKafkaConfig(instancePrefix?: string) {
       logLevel: remapLogLevel(KAFKA_LOG_LEVEL),
       clientId: KAFKA_CLIENT_ID,
       brokers: KAFKA_BROKERS.map(s => s.trim()).filter((s: string) => !!s),
-      ssl: getSSLConfig(prefix)
+      ssl: getSSLConfig(prefix),
+      sasl: getSASLConfig(prefix)
     };
   }
   return memoizedOptions[prefixKey];
