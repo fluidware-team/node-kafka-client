@@ -8,7 +8,7 @@ import {
   TopicPartitionOffsetAndMetadata,
   ValueOf
 } from 'kafkajs';
-import { Consumer as GenericConsumer } from '../interface';
+import { Consumer as GenericConsumer } from '../interfaces';
 import { getLogger } from '@fluidware-it/saddlebag';
 
 export class KafkaConsumer implements GenericConsumer {

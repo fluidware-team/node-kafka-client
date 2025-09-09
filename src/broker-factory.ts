@@ -1,4 +1,4 @@
-import type { Consumer, Producer } from './interface';
+import type { Consumer, Producer } from './interfaces';
 import type { ConsumerConfig, ProducerConfig, KafkaConfig } from 'kafkajs';
 import { Kafka } from 'kafkajs';
 import { KafkaProducer, KafkaConsumer } from './kafka';

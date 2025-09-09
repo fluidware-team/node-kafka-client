@@ -6,7 +6,7 @@ import {
   RemoveInstrumentationEventListener,
   ValueOf
 } from 'kafkajs';
-import { Producer as GenericProducer } from '../interface';
+import { Producer as GenericProducer } from '../interfaces';
 import { getLogger } from '@fluidware-it/saddlebag';
 
 export class KafkaProducer implements GenericProducer {

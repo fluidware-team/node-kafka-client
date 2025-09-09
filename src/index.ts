@@ -15,5 +15,5 @@
  */
 
 export { BrokerFactory } from './broker-factory';
-export { Consumer, Producer } from './interface';
 export * from './kafka';
+export type * from './interfaces';
